@@ -135,7 +135,7 @@ if __name__ == '__main__':
 
     criterion = nn.CrossEntropyLoss()
 
-    learning_rate = 0.1
+    learning_rate = 0.01
 
     optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001)
 
