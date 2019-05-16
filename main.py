@@ -93,6 +93,8 @@ if __name__ == '__main__':
                         help='momentum (default: 0)')
     parser.add_argument('--save-path', type=str, default='./result',
                         help='save path (default: ./result)')
+    parser.add_argument('--val',action='store_true',default=False,
+                        help='validation mode')
     args = parser.parse_args()
 
     save_path = args.save_path
@@ -109,19 +111,20 @@ if __name__ == '__main__':
 
     splited_data = DataSpliter('/userhome/bigdata/train')
 
-    train_data = Data(splited_data.train,
-                      train=True,
-                      transforms=transforms.Compose([
-                          transforms.ToTensor(),
-                          transforms.Normalize((0.5,), (0.5,))
-                      ]))
-
-    val_data = Data(splited_data.val,
-                    train=True,
-                    transforms=transforms.Compose([
-                        transforms.ToTensor(),
-                        transforms.Normalize((0.5,), (0.5,))
-                    ]))
+    if not args.val:
+        train_data = Data(splited_data.train,
+                          train=True,
+                          transforms=transforms.Compose([
+                              transforms.ToTensor(),
+                              transforms.Normalize((0.5,), (0.5,))
+                          ]))
+    else:
+        train_data = Data(splited_data.val,
+                        train=True,
+                        transforms=transforms.Compose([
+                            transforms.ToTensor(),
+                            transforms.Normalize((0.5,), (0.5,))
+                        ]))
 
     test_data = Data(splited_data.test,
                      train=True,
