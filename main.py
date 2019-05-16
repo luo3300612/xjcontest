@@ -89,8 +89,8 @@ if __name__ == '__main__':
                         help='use adam')
     parser.add_argument('--lr', type=float, default=0.1,
                         help='learning rate (default: 0.1)')
-    parser.add_argument('--momentum', type=float, default=0.9,
-                        help='momentum (default: 0.9)')
+    parser.add_argument('--momentum', type=float, default=0,
+                        help='momentum (default: 0)')
     parser.add_argument('--save-path', type=str, default='./result',
                         help='save path (default: ./result)')
     args = parser.parse_args()
@@ -168,7 +168,7 @@ if __name__ == '__main__':
             data = data.to(device)
             target = target.to(device)
             iter_idx += 1
-            # lr = adjust_learning_rate(optimizer, iter_idx, init_lr=learning_rate)
+            lr = adjust_learning_rate(optimizer, iter_idx, init_lr=learning_rate)
             output = net(data)
             loss = criterion(output, target)
             optimizer.zero_grad()
