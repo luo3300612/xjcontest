@@ -137,10 +137,6 @@ if __name__ == '__main__':
                               batch_size=batch_size,
                               shuffle=True,
                               num_workers=1)
-    val_loader = DataLoader(val_data,
-                            batch_size=batch_size,
-                            shuffle=True,
-                            num_workers=1)
     test_loader = DataLoader(test_data,
                              batch_size=batch_size,
                              shuffle=True,
