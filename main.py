@@ -40,11 +40,11 @@ class DataSpliter:
 
 class Data(Dataset):
 
-    def __init__(self, filepaths, train=True, transforms=None, target_transform=None):
+    def __init__(self, filepaths, train=True, transforms=None, target_transforms=None):
         self.filepaths = filepaths
         self.train = train
         self.transforms = transforms
-        self.target_transform = target_transform
+        self.target_transform = target_transforms
 
     def __len__(self):
         return len(self.filepaths)
@@ -55,11 +55,11 @@ class Data(Dataset):
         if self.train:
             target = int(self.filepaths[idx].split('/')[-1].split('_')[-1].split('.')[0])
 
-        if self.transform is not None:
-            img = self.transform(img)
+        if self.transforms is not None:
+            img = self.transforms(img)
 
-        if self.target_transform is not None:
-            target = self.target_transform(target)
+        if self.target_transforms is not None:
+            target = self.target_transforms(target)
 
         return img, target if self.train else img
 
