@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     train_data = Data(splited_data.train,
                       train=True,
-                      transforms=transforms.Compos([
+                      transforms=transforms.Compose([
                           transforms.ToTensor(),
                           transforms.Normalize((0.5,), (0.5,))
                       ]))
@@ -123,7 +123,7 @@ if __name__ == '__main__':
                               shuffle=True,
                               num_workers=1)
     val_loader = DataLoader(val_data,
-                            batch_size=batch_size,
+                            batch_size=batch_sWWize,
                             shuffle=True,
                             num_workers=1)
     test_loader = DataLoader(test_data,
