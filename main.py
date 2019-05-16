@@ -53,7 +53,7 @@ class Data(Dataset):
         img = Image.open(self.filepaths[idx])
 
         if self.train:
-            target = int(self.filepaths[idx].split('/')[-1].split('_')[-1].split('.')[0])
+            target = int(self.filepaths[idx].split('/')[-1].split('_')[-1].split('.')[0]) - 1
 
         if self.transforms is not None:
             img = self.transforms(img)
