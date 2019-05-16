@@ -34,8 +34,8 @@ class DataSpliter:
             num = len(filenames)
             shuffle(filenames)
             self.train += filenames[0:int(ratio[0] * num)]
-            self.val += filenames[int(ratio[0] * num):int(ratio[1]) * num]
-            self.test += filenames[int(ratio[1] * num):]
+            self.val += filenames[int(ratio[0] * num):int((ratio[0] + ratio[1]) * num)]
+            self.test += filenames[int((ratio[0] + ratio[1]) * num):]
 
 
 class Data(Dataset):
@@ -131,7 +131,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              num_workers=1)
 
-    net = resnet18(**{'num_classes':9}).to(device)
+    net = resnet18(**{'num_classes': 9}).to(device)
 
     criterion = nn.CrossEntropyLoss()
 
