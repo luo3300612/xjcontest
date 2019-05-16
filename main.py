@@ -44,7 +44,7 @@ class Data(Dataset):
         self.filepaths = filepaths
         self.train = train
         self.transforms = transforms
-        self.target_transform = target_transforms
+        self.target_transforms = target_transforms
 
     def __len__(self):
         return len(self.filepaths)
