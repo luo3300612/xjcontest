@@ -106,14 +106,14 @@ if __name__ == '__main__':
 
     val_data = Data(splited_data.val,
                     train=True,
-                    transforms=transforms.Compos([
+                    transforms=transforms.Compose([
                         transforms.ToTensor(),
                         transforms.Normalize((0.5,), (0.5,))
                     ]))
 
     test_data = Data(splited_data.test,
                      train=True,
-                     transforms=transforms.Compos([
+                     transforms=transforms.Compose([
                          transforms.ToTensor(),
                          transforms.Normalize((0.5,), (0.5,))
                      ]))
