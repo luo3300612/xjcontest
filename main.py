@@ -85,7 +85,19 @@ if __name__ == '__main__':
                         help='disables CUDA training')
     parser.add_argument('--log-path', type=str, default='./train.log',
                         help='path to save log file (default: ./train.log)')
+    parser.add_argument('--adam', action='store_true', default=False,
+                        help='use adam')
+    parser.add_argument('--lr', type=float, default=0.1,
+                        help='learning rate (default: 0.1)')
+    parser.add_argument('--momentum', type=float, default=0.9,
+                        help='momentum (default: 0.9)')
+    parser.add_argument('--save-path', type=str, default='./result',
+                        help='save path (default: ./result)')
     args = parser.parse_args()
+
+    save_path = args.save_path
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
 
     monitor = OutPutUtil(True, True, args.log_path)
 
@@ -135,9 +147,11 @@ if __name__ == '__main__':
 
     criterion = nn.CrossEntropyLoss()
 
-    learning_rate = 0.01
-
-    optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001)
+    learning_rate = args.lr
+    if args.adam:
+        optimizer = optim.Adam(net.parameters(), lr=learning_rate, momentum=args.momentum, weight_decay=0.0001)
+    else:
+        optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001)
 
     writer = SummaryWriter()
 
@@ -146,7 +160,7 @@ if __name__ == '__main__':
     val_interval = 1000
     print_interval = 10
 
-    lr = 0.1
+    lr = learning_rate
 
     best_test_loss = 4
     while True:
