@@ -54,7 +54,8 @@ class Data(Dataset):
         img = Image.open(self.img_paths[idx])
         img_file_name = self.img_paths[idx].split('/')[-1]
         feat_file_name = img_file_name.split('.')[0] + '.npy'
-        feature = np.load(os.path.join(self.feat_path,feat_file_name))
+        feature = np.load(os.path.join(self.feat_path, feat_file_name))
+        feature = feature / np.sum(feature)
         if self.train:
             target = int(self.img_paths[idx].split('/')[-1].split('_')[-1].split('.')[0]) - 1
 
@@ -131,6 +132,7 @@ if __name__ == '__main__':
     if not args.val:
         monitor.speak("train mode")
         train_data = Data(splited_data.train,
+                          feat_path='/userhome/bigdata/train/visit_feat',
                           train=True,
                           transforms=transforms.Compose([
                               transforms.ToTensor(),
@@ -146,6 +148,7 @@ if __name__ == '__main__':
                           ]))
 
     test_data = Data(splited_data.test,
+                     feat_path='/userhome/bigdata/train/visit_feat',
                      train=True,
                      transforms=transforms.Compose([
                          transforms.ToTensor(),
