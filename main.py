@@ -40,12 +40,11 @@ class DataSpliter:
 
 class Data(Dataset):
 
-    def __init__(self, img_paths, feat_path, train=True, transforms=None, target_transforms=None):
+    def __init__(self, img_paths, feat_path, train=True, transforms=None):
         self.img_paths = img_paths
         self.feat_path = feat_path
         self.train = train
         self.transforms = transforms
-        self.target_transforms = target_transforms
 
     def __len__(self):
         return len(self.img_paths)
@@ -56,16 +55,20 @@ class Data(Dataset):
         feat_file_name = img_file_name.split('.')[0] + '.npy'
         feature = np.load(os.path.join(self.feat_path, feat_file_name))
         feature = feature / np.sum(feature)
-        if self.train:
-            target = int(self.img_paths[idx].split('/')[-1].split('_')[-1].split('.')[0]) - 1
 
         if self.transforms is not None:
             img = self.transforms(img)
 
-        if self.target_transforms is not None:
-            target = self.target_transforms(target)
-
-        return img, feature, target if self.train else img, feature
+        sample = {}
+        if self.train:
+            target = int(self.img_paths[idx].split('/')[-1].split('_')[-1].split('.')[0]) - 1
+            sample['img'] = img
+            sample['feature'] = feature
+            sample['target'] = target
+        else:
+            sample['img'] = img
+            sample['feature'] = feature
+        return sample
 
 
 def adjust_learning_rate(optimizer, iteration, init_lr=0.1):
