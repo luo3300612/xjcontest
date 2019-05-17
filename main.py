@@ -63,7 +63,7 @@ class Data(Dataset):
         if self.train:
             target = int(self.img_paths[idx].split('/')[-1].split('_')[-1].split('.')[0]) - 1
             sample['img'] = img
-            sample['feature'] = feature
+            sample['feature'] = torch.from_numpy(feature).float()
             sample['target'] = target
         else:
             sample['img'] = img
@@ -93,8 +93,6 @@ class Net(nn.Module):
     def forward(self, img, text):
         feature = self.feature_extracter(img)
         feature = feature.view((feature.shape[0], -1))
-        print(type(feature))
-        print(type(text))
         out = torch.cat((feature, text), dim=1)
         out = self.fc(out)
         return out
