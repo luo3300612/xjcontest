@@ -173,9 +173,9 @@ if __name__ == '__main__':
 
     learning_rate = args.lr
     if args.adam:
-        optimizer = optim.Adam(net.parameters(), lr=learning_rate, momentum=args.momentum, weight_decay=0.0001)
+        optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=0.0001)
     else:
-        optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001)
+        optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=args.momentum, weight_decay=0.0001)
 
     writer = SummaryWriter()
 
