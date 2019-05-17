@@ -189,10 +189,10 @@ if __name__ == '__main__':
     best_test_loss = 4
     net.train()
     while True:
-        for batch_idx, (img, feature, target) in enumerate(train_loader):
-            img = img.to(device)
-            feature = feature.to(device)
-            target = target.to(device)
+        for batch_idx, sample in enumerate(train_loader):
+            img = sample['img'].to(device)
+            feature = sample['feature'].to(device)
+            target = sample['target'].to(device)
             iter_idx += 1
             lr = adjust_learning_rate(optimizer, iter_idx, init_lr=learning_rate)
             output = net(img, feature)
