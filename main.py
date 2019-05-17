@@ -93,6 +93,8 @@ class Net(nn.Module):
     def forward(self, img, text):
         feature = self.feature_extracter(img)
         feature = feature.view((feature.shape[0], -1))
+        print(type(feature))
+        print(type(text))
         out = torch.cat((feature, text), dim=1)
         out = self.fc(out)
         return out
