@@ -40,20 +40,23 @@ class DataSpliter:
 
 class Data(Dataset):
 
-    def __init__(self, filepaths, train=True, transforms=None, target_transforms=None):
-        self.filepaths = filepaths
+    def __init__(self, img_paths, feat_path, train=True, transforms=None, target_transforms=None):
+        self.img_paths = img_paths
+        self.feat_path = feat_path
         self.train = train
         self.transforms = transforms
         self.target_transforms = target_transforms
 
     def __len__(self):
-        return len(self.filepaths)
+        return len(self.img_paths)
 
     def __getitem__(self, idx):
-        img = Image.open(self.filepaths[idx])
-
+        img = Image.open(self.img_paths[idx])
+        img_file_name = self.img_paths[idx].split('/')[-1]
+        feat_file_name = img_file_name.split('.')[0] + '.npy'
+        feature = np.load(os.path.join(self.feat_path,feat_file_name))
         if self.train:
-            target = int(self.filepaths[idx].split('/')[-1].split('_')[-1].split('.')[0]) - 1
+            target = int(self.img_paths[idx].split('/')[-1].split('_')[-1].split('.')[0]) - 1
 
         if self.transforms is not None:
             img = self.transforms(img)
@@ -61,7 +64,7 @@ class Data(Dataset):
         if self.target_transforms is not None:
             target = self.target_transforms(target)
 
-        return img, target if self.train else img
+        return img, feature, target if self.train else img, feature
 
 
 def adjust_learning_rate(optimizer, iteration, init_lr=0.1):
@@ -75,6 +78,20 @@ def adjust_learning_rate(optimizer, iteration, init_lr=0.1):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
     return lr
+
+
+class Net(nn.Module):
+    def __init__(self, num_classes=9):
+        super(Net, self).__init__()
+        self.feature_extracter = nn.Sequential(*list(resnet18().children())[:-1])
+        self.fc = nn.Linear(512 + 24, num_classes)
+
+    def forward(self, img, text):
+        feature = self.feature_extracter(img)
+        feature = feature.view((feature.shape[0], -1))
+        out = torch.cat((feature, text), dim=1)
+        out = self.fc(out)
+        return out
 
 
 if __name__ == '__main__':
@@ -144,7 +161,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              num_workers=1)
 
-    net = resnet18(**{'num_classes': 9}).to(device)
+    net = Net().to(device)
 
     criterion = nn.CrossEntropyLoss()
 
@@ -166,12 +183,13 @@ if __name__ == '__main__':
     best_test_loss = 4
     net.train()
     while True:
-        for batch_idx, (data, target) in enumerate(train_loader):
-            data = data.to(device)
+        for batch_idx, (img, feature, target) in enumerate(train_loader):
+            img = img.to(device)
+            feature = feature.to(device)
             target = target.to(device)
             iter_idx += 1
             lr = adjust_learning_rate(optimizer, iter_idx, init_lr=learning_rate)
-            output = net(data)
+            output = net(img, feature)
             loss = criterion(output, target)
             optimizer.zero_grad()
             loss.backward()
@@ -185,14 +203,14 @@ if __name__ == '__main__':
                 net.eval()
                 with torch.no_grad():
                     acc = 0.0
-                    for data, target in test_loader:
-                        data = data.to(device)
+                    for img, target in test_loader:
+                        img = img.to(device)
                         target = target.to(device)
-                        output = net(data)
+                        output = net(img)
                         pred_label = torch.argmax(output, dim=1)
                         acc += torch.sum(pred_label == target).item()
                         loss = criterion(output, target)
-                        test_loss += loss.item() * data.shape[0]
+                        test_loss += loss.item() * img.shape[0]
                     acc = acc / len(test_data)
                     test_loss = test_loss / len(test_data)
 
