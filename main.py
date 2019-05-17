@@ -93,7 +93,7 @@ if __name__ == '__main__':
                         help='momentum (default: 0)')
     parser.add_argument('--save-path', type=str, default='./result',
                         help='save path (default: ./result)')
-    parser.add_argument('--val',action='store_true',default=False,
+    parser.add_argument('--val', action='store_true', default=False,
                         help='validation mode')
     args = parser.parse_args()
 
@@ -112,6 +112,7 @@ if __name__ == '__main__':
     splited_data = DataSpliter('/userhome/bigdata/train')
 
     if not args.val:
+        monitor.speak("train mode")
         train_data = Data(splited_data.train,
                           train=True,
                           transforms=transforms.Compose([
@@ -119,12 +120,13 @@ if __name__ == '__main__':
                               transforms.Normalize((0.5,), (0.5,))
                           ]))
     else:
+        monitor.speak("val mode")
         train_data = Data(splited_data.val,
-                        train=True,
-                        transforms=transforms.Compose([
-                            transforms.ToTensor(),
-                            transforms.Normalize((0.5,), (0.5,))
-                        ]))
+                          train=True,
+                          transforms=transforms.Compose([
+                              transforms.ToTensor(),
+                              transforms.Normalize((0.5,), (0.5,))
+                          ]))
 
     test_data = Data(splited_data.test,
                      train=True,
@@ -162,6 +164,7 @@ if __name__ == '__main__':
     lr = learning_rate
 
     best_test_loss = 4
+    net.train()
     while True:
         for batch_idx, (data, target) in enumerate(train_loader):
             data = data.to(device)
@@ -179,6 +182,7 @@ if __name__ == '__main__':
 
             if iter_idx % val_interval == 0:
                 test_loss = 0.0
+                net.eval()
                 with torch.no_grad():
                     acc = 0.0
                     for data, target in test_loader:
@@ -199,6 +203,7 @@ if __name__ == '__main__':
                     torch.save(net.state_dict(), r"./result/model{}".format(iter_idx))
                     monitor.speak("test loss: {:.6f} < best: {:.6f},save model".format(test_loss, best_test_loss))
                     best_test_loss = test_loss
+                net.train()
 
         if iter_idx > n_iter:
             monitor.speak("Done")
