@@ -161,11 +161,11 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_data,
                               batch_size=batch_size,
                               shuffle=True,
-                              num_workers=1)
+                              num_workers=4)
     test_loader = DataLoader(test_data,
                              batch_size=batch_size,
                              shuffle=True,
-                             num_workers=1)
+                             num_workers=4)
 
     net = Net().to(device)
 
@@ -194,17 +194,17 @@ if __name__ == '__main__':
             feature = sample['feature'].to(device)
             target = sample['target'].to(device)
             iter_idx += 1
-            # lr = adjust_learning_rate(optimizer, iter_idx, init_lr=learning_rate)
-            # output = net(img, feature)
-            # loss = criterion(output, target)
-            # optimizer.zero_grad()
-            # loss.backward()
-            # optimizer.step()
-            if iter_idx % print_interval == 0:
-                monitor.speak('Iter: {}/{}\tLoss:{}\tLR: {}'.format(iter_idx, n_iter, "??", lr))
+            lr = adjust_learning_rate(optimizer, iter_idx, init_lr=learning_rate)
+            output = net(img, feature)
+            loss = criterion(output, target)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
             # if iter_idx % print_interval == 0:
-            #     monitor.speak('Iter: {}/{}\tLoss:{:.6f}\tLR: {}'.format(iter_idx, n_iter, loss.item(), lr))
-            # writer.add_scalar("train/train_loss", loss.item(), iter_idx)
+            #     monitor.speak('Iter: {}/{}\tLoss:{}\tLR: {}'.format(iter_idx, n_iter, "??", lr))
+            if iter_idx % print_interval == 0:
+                monitor.speak('Iter: {}/{}\tLoss:{:.6f}\tLR: {}'.format(iter_idx, n_iter, loss.item(), lr))
+            writer.add_scalar("train/train_loss", loss.item(), iter_idx)
 
             if iter_idx % val_interval == 0:
                 test_loss = 0.0
