@@ -2,3 +2,9 @@
 __pycache__/
 000010_003.txt
 .ipynb_checkpoints/
+train.log
+report.txt
+profile.stats
+result/
+runs/
+analyze.py
