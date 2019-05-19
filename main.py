@@ -209,10 +209,11 @@ if __name__ == '__main__':
                 net.eval()
                 with torch.no_grad():
                     acc = 0.0
-                    for img, target in test_loader:
-                        img = img.to(device)
-                        target = target.to(device)
-                        output = net(img)
+                    for batch_idx, sample in enumerate(test_loader):
+                        img = sample['img'].to(device)
+                        feature = sample['feature'].to(device)
+                        target = sample['target'].to(device)
+                        output = net(img, feature)
                         pred_label = torch.argmax(output, dim=1)
                         acc += torch.sum(pred_label == target).item()
                         loss = criterion(output, target)
