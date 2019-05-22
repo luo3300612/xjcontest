@@ -10,3 +10,8 @@ runs/
 analyze.py
 000005_007.txt
 000018_001.txt
+imgs/
+imgs_after/
+imgs.tar
+a.out
+dehaze.o

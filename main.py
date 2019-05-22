@@ -18,10 +18,12 @@ from random import shuffle
 from torchvision.models import resnet18
 from pathlib import Path
 import pandas as pd
+from model import ResNet20
+
 
 class Data(Dataset):
 
-    def __init__(self, csv_path, train=True,transforms=None):
+    def __init__(self, csv_path, train=True, transforms=None):
         self.csv = pd.read_csv(csv_path)
         self.train = train
         self.transforms = transforms
@@ -64,13 +66,14 @@ def adjust_learning_rate(optimizer, iteration, init_lr=0.1):
 class Net(nn.Module):
     def __init__(self, num_classes=9):
         super(Net, self).__init__()
-        self.feature_extracter = nn.Sequential(*list(resnet18().children())[:-1])
-        self.fc = nn.Linear(512 + 24, num_classes)
+        self.img_feature_extracter = nn.Sequential(*list(resnet18().children())[:-1])
+        self.visit_feature_extracter = ResNet20(7)
+        self.fc = nn.Linear(512 + 64, num_classes)
 
     def forward(self, img, text):
-        feature = self.feature_extracter(img)
-        feature = feature.view((feature.shape[0], -1))
-        out = torch.cat((feature, text), dim=1)
+        img_feature = self.feature_extracter(img)
+        visit_feature = self.visit_feature_extracter(text)
+        out = torch.cat((img_feature, visit_feature), dim=1)
         out = self.fc(out)
         return out
 
@@ -107,12 +110,9 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    splited_data = DataSpliter('/userhome/bigdata/train')
-
     if not args.val:
         monitor.speak("train mode")
-        train_data = Data(splited_data.train,
-                          feat_path='/userhome/bigdata/train/visit_feat',
+        train_data = Data('./train.csv',
                           train=True,
                           transforms=transforms.Compose([
                               transforms.ToTensor(),
@@ -120,15 +120,14 @@ if __name__ == '__main__':
                           ]))
     else:
         monitor.speak("val mode")
-        train_data = Data(splited_data.val,
+        train_data = Data('./val.csv',
                           train=True,
                           transforms=transforms.Compose([
                               transforms.ToTensor(),
                               transforms.Normalize((0.5,), (0.5,))
                           ]))
 
-    test_data = Data(splited_data.test,
-                     feat_path='/userhome/bigdata/train/visit_feat',
+    test_data = Data('./test.csv',
                      train=True,
                      transforms=transforms.Compose([
                          transforms.ToTensor(),
