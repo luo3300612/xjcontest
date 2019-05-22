@@ -15,3 +15,6 @@ imgs_after/
 imgs.tar
 a.out
 dehaze.o
+test.csv
+train.csv
+val.csv
