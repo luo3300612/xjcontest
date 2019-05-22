@@ -3,6 +3,10 @@ import os
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+from datetime import date
+from pathlib import Path
+
+start_day = date(2018, 10, 1)
 
 
 class OutPutUtil:
@@ -38,11 +42,77 @@ def get_time_list(string):
     return time_list
 
 
-def prepare_text_feature(path, save_path):
-    filenames = os.listdir(path)
-    for filename in tqdm(filenames):
-        txt = pd.read_table(os.path.join(path, filename), header=None)
-        out = np.zeros((24,))
-        for string in txt.iloc[:, 1]:
-            out += get_vector(string)
-        np.save(os.path.join(save_path, filename.split('.')[0] + '.npy'), out)
+def prepare_text_feature(filepaths, save_path):
+    for filepath in tqdm(filepaths):
+        save_to = Path(save_path,filepath.name.split('.')[0]+'.npy')
+        out = txt2np(filepath)
+        np.save(save_to, out)
+        # print("save_path",save_to)
+        # print("components,save_path{},filename{}".format(save_path,str(filepath).split('.')[0]))
+
+
+def txt2np(filepath):
+    data_np = np.zeros((7, 26, 24), dtype=int)
+    # print("filepath",filepath)
+    data = pd.read_table(filepath, header=None)
+    for string in data.iloc[:, 1]:
+        day_list = string.split(',')
+        for day in day_list:
+            the_day = day.split('&')[0]
+            hour_list = day.split('&')[1].split('|')
+            the_day = date(int(the_day[0:4]), int(the_day[4:6]), int(the_day[6:]))
+            delta = (the_day - start_day).days
+            for hour in hour_list:
+                week_np = delta // 7
+                day_np = delta % 7
+                data_np[day_np, week_np, int(hour)] += 1
+    return data_np
+
+def gen_csv(img_path,visit_path,ratio=[0.8,0.1,0.1]):
+    classes = ['001', '002', '003', '004', '005', '006', '007', '008', '009']
+    img_path = Path(img_path)
+    files = list(img_path.iterdirs())
+    class_paths = []
+    for clas in classes:
+        class_path = []
+        for file in files:
+            if clas in files.name.split('_')[-1]:
+                class_path.append(file)
+        class_paths.append(class_path)
+
+    train = pd.DataFrame(columns=('img_path','visit_path','class'))
+    val = pd.DataFrame(columns=('img_path','visit_path','class'))
+    test = pd.DataFrame(columns=('img_path','visit_path','class'))
+    for i,class_path in enumerate(class_paths):
+        num = len(class_path)
+        shuffle(class_path)
+        for j in range(0,int(ratio[0]*num)):
+            file = class_path[j]
+            filename = file.name
+            im_path = str(file)
+            vis_path = visit_path + filename.split('.')[0] + '.npy'
+            apd = [im_path,vis_path,i]
+            train = train.append(apd)
+            print("append:",apd)
+
+        for j in range(int(ratio[0] * num),int((ratio[0] + ratio[1]) * num)):
+            file = class_path[j]
+            filename = file.name
+            im_path = str(file)
+            vis_path = visit_path + filename.split('.')[0] + '.npy'
+            apd = [im_path, vis_path, i]
+            val = val.append(apd)
+            print("append:", apd)
+
+        for j in range(int((ratio[0] + ratio[1]) * num),num):
+            file = class_path[j]
+            filename = file.name
+            im_path = str(file)
+            vis_path = visit_path + filename.split('.')[0] + '.npy'
+            apd = [im_path, vis_path, i]
+            test = test.append(apd)
+            print("append:", apd)
+    assert len(train)+len(val)+len(test) == 40000,"{}+{}+{} should be 40000".format(len(train),len(val),len(test))
+    train.to_csv('trian.csv')
+    val.to_csv('val.csv')
+    test.to_csv('test.csv')

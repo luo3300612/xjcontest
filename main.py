@@ -16,54 +16,31 @@ import os
 from PIL import Image
 from random import shuffle
 from torchvision.models import resnet18
-
-
-class DataSpliter:
-    sub_paths = ['001', '002', '003', '004', '005', '006', '007', '008', '009']
-
-    def __init__(self, path, ratio=[0.8, 0.1, 0.1]):
-        self.path = path
-        self.ratio = ratio
-        self.train = []
-        self.val = []
-        self.test = []
-        for sub_path in self.sub_paths:
-            class_path = os.path.join(path, sub_path)
-            filenames = os.listdir(class_path)
-            filenames = [os.path.join(class_path, filename) for filename in filenames]
-            num = len(filenames)
-            shuffle(filenames)
-            self.train += filenames[0:int(ratio[0] * num)]
-            self.val += filenames[int(ratio[0] * num):int((ratio[0] + ratio[1]) * num)]
-            self.test += filenames[int((ratio[0] + ratio[1]) * num):]
-
+from pathlib import Path
+import pandas as pd
 
 class Data(Dataset):
 
-    def __init__(self, img_paths, feat_path, train=True, transforms=None):
-        self.img_paths = img_paths
-        self.feat_path = feat_path
+    def __init__(self, csv_path, train=True,transforms=None):
+        self.csv = pd.read_csv(csv_path)
         self.train = train
         self.transforms = transforms
 
     def __len__(self):
-        return len(self.img_paths)
+        return len(self.csv)
 
     def __getitem__(self, idx):
-        img = Image.open(self.img_paths[idx])
-        img_file_name = self.img_paths[idx].split('/')[-1]
-        feat_file_name = img_file_name.split('.')[0] + '.npy'
-        feature = np.load(os.path.join(self.feat_path, feat_file_name))
-        feature = feature / np.sum(feature)
+        img = Image.open(self.csv.iloc[idx][0])
+        feature = np.load(self.csv.iloc[idx][1])
 
         if self.transforms is not None:
             img = self.transforms(img)
 
         sample = {}
         if self.train:
-            target = int(self.img_paths[idx].split('/')[-1].split('_')[-1].split('.')[0]) - 1
+            target = self.csv.iloc[idx][2] - 1
             sample['img'] = img
-            sample['feature'] = torch.from_numpy(feature).float()
+            sample['feature'] = feature
             sample['target'] = target
         else:
             sample['img'] = img
