@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from datetime import date
 from pathlib import Path
+from random import shuffle
 
 start_day = date(2018, 10, 1)
 
@@ -44,7 +45,7 @@ def get_time_list(string):
 
 def prepare_text_feature(filepaths, save_path):
     for filepath in tqdm(filepaths):
-        save_to = Path(save_path,filepath.name.split('.')[0]+'.npy')
+        save_to = Path(save_path, filepath.name.split('.')[0] + '.npy')
         out = txt2np(filepath)
         np.save(save_to, out)
         # print("save_path",save_to)
@@ -68,51 +69,55 @@ def txt2np(filepath):
                 data_np[day_np, week_np, int(hour)] += 1
     return data_np
 
-def gen_csv(img_path,visit_path,ratio=[0.8,0.1,0.1]):
+
+def gen_csv(img_path, visit_path, ratio=[0.8, 0.1, 0.1]):
     classes = ['001', '002', '003', '004', '005', '006', '007', '008', '009']
     img_path = Path(img_path)
-    files = list(img_path.iterdirs())
+    files = list(img_path.iterdir())
     class_paths = []
     for clas in classes:
         class_path = []
         for file in files:
-            if clas in files.name.split('_')[-1]:
+            if clas in file.name.split('_')[-1]:
                 class_path.append(file)
         class_paths.append(class_path)
 
-    train = pd.DataFrame(columns=('img_path','visit_path','class'))
-    val = pd.DataFrame(columns=('img_path','visit_path','class'))
-    test = pd.DataFrame(columns=('img_path','visit_path','class'))
-    for i,class_path in enumerate(class_paths):
+    train = pd.DataFrame(columns=('img_path', 'visit_path', 'class'))
+    val = pd.DataFrame(columns=('img_path', 'visit_path', 'class'))
+    test = pd.DataFrame(columns=('img_path', 'visit_path', 'class'))
+    for i, class_path in enumerate(class_paths):
         num = len(class_path)
         shuffle(class_path)
-        for j in range(0,int(ratio[0]*num)):
+        print("class:{}".format(i))
+        print("train")
+        for j in tqdm(range(0, int(ratio[0] * num))):
             file = class_path[j]
             filename = file.name
             im_path = str(file)
-            vis_path = visit_path + filename.split('.')[0] + '.npy'
-            apd = [im_path,vis_path,i]
+            vis_path = visit_path + '/' + filename.split('.')[0] + '.npy'
+            apd = [im_path, vis_path, i]
             train = train.append(apd)
-            print("append:",apd)
-
-        for j in range(int(ratio[0] * num),int((ratio[0] + ratio[1]) * num)):
+            # print("append:", apd)
+        print("val")
+        for j in tqdm(range(int(ratio[0] * num), int((ratio[0] + ratio[1]) * num))):
             file = class_path[j]
             filename = file.name
             im_path = str(file)
-            vis_path = visit_path + filename.split('.')[0] + '.npy'
+            vis_path = visit_path + '/' + filename.split('.')[0] + '.npy'
             apd = [im_path, vis_path, i]
             val = val.append(apd)
-            print("append:", apd)
-
-        for j in range(int((ratio[0] + ratio[1]) * num),num):
+            # print("append:", apd)
+        print("test:")
+        for j in tqdm(range(int((ratio[0] + ratio[1]) * num), num)):
             file = class_path[j]
             filename = file.name
             im_path = str(file)
-            vis_path = visit_path + filename.split('.')[0] + '.npy'
+            vis_path = visit_path + '/' + filename.split('.')[0] + '.npy'
             apd = [im_path, vis_path, i]
             test = test.append(apd)
-            print("append:", apd)
-    assert len(train)+len(val)+len(test) == 40000,"{}+{}+{} should be 40000".format(len(train),len(val),len(test))
+            # print("append:", apd)
+    # assert len(train) + len(val) + len(test) == 120000, "{}+{}+{} should be 40000".format(len(train), len(val),
+    #                                                                                      len(test))
     train.to_csv('trian.csv')
     val.to_csv('val.csv')
     test.to_csv('test.csv')
