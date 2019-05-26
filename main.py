@@ -172,8 +172,10 @@ if __name__ == '__main__':
     device = torch.device("cuda" if use_cuda else "cpu")
 
     monitor.speak("Split Data ...")
-
-    spliter = DataSpliter('/userhome/bigdata/train')
+    if args.val:
+        spliter = DataSpliter('/userhome/bigdata/train')
+    else:
+        spliter = DataSpliter('/userhome/bigdata/train', ratio=[0.95, 0, 0.05])
     train_path = spliter.train
     val_path = spliter.val
     test_path = spliter.test
