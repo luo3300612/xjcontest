@@ -18,7 +18,7 @@ from random import shuffle
 from torchvision.models import resnet18
 from pathlib import Path
 import pandas as pd
-from model import ResNet20
+from model import ResNet20, ResNetImg
 import multiprocessing
 from datetime import datetime
 import time
@@ -109,11 +109,16 @@ def adjust_learning_rate(optimizer, iteration, n_iter, init_lr=0.1):
 
 
 class Net(nn.Module):
-    def __init__(self, num_classes=9):
+    def __init__(self, resnet20=False, num_classes=9):
         super(Net, self).__init__()
-        self.img_feature_extracter = nn.Sequential(*list(resnet18().children())[:-1])
         self.visit_feature_extracter = ResNet20(in_channel=7)
-        self.fc = nn.Linear(512 + 64, num_classes)
+        self.resnet20 = resnet20
+        if self.resnet20:
+            self.img_feature_extracter = ResNetImg(3)
+            self.fc = nn.Linear(128 + 64, num_classes)
+        else:
+            self.img_feature_extracter = nn.Sequential(*list(resnet18().children())[:-1])
+            self.fc = nn.Linear(512 + 64, num_classes)
 
     def forward(self, img, text):
         img_feature = self.img_feature_extracter(img).view((img.size(0), -1))
@@ -136,6 +141,8 @@ if __name__ == '__main__':
                         help='disables CUDA training')
     parser.add_argument('--adam', action='store_true', default=False,
                         help='use adam')
+    parser.add_argument('--resnet20img', action='store_true', default=False,
+                        help='use resnet20 for img feature')
     parser.add_argument('--lr', type=float, default=0.1,
                         help='learning rate (default: 0.1)')
     parser.add_argument('--weight-decay', type=float, default=0.0001,
@@ -152,7 +159,7 @@ if __name__ == '__main__':
     save_path = args.save_path
     if not os.path.exists(save_path):
         os.mkdir(save_path)
-    event_path = os.path.join(save_path,args.comment)
+    event_path = os.path.join(save_path, args.comment)
     if not os.path.exists(event_path):
         os.mkdir(event_path)
 
@@ -220,7 +227,7 @@ if __name__ == '__main__':
                              num_workers=multiprocessing.cpu_count(),
                              pin_memory=True)
 
-    net = Net().to(device)
+    net = Net(args.resnet20img).to(device)
 
     criterion = nn.CrossEntropyLoss()
 
