@@ -68,7 +68,7 @@ class ResNetImg(nn.Module):
     """
 
     def __init__(self, in_channel, feature_dim=128):
-        super(ResNet20, self).__init__()
+        super(ResNetImg, self).__init__()
         self.feature_dim = feature_dim
         self.conv1 = nn.Conv2d(in_channel, 32, kernel_size=3, stride=1, padding=(2, 3), bias=False)
         self.bn1 = nn.BatchNorm2d(32)
