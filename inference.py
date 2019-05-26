@@ -7,6 +7,7 @@ import torchvision.transforms as transforms
 import multiprocessing
 from tqdm import tqdm
 from pathlib import Path
+import pandas as pd
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='inference')
@@ -32,12 +33,13 @@ if __name__ == '__main__':
                               transforms.ToTensor(),
                               transforms.Normalize((0.5,), (0.5,))
                           ]))
+    result = pd.DataFrame(columns=["id", "category"])
     with torch.no_grad():
-        for sample in inference_data:
+        for sample in tqdm(inference_data):
             img = sample['img'].to(device)
             feature = sample['feature'].float().to(device)
+            img_name = sample['img_name']
             output = net(img, feature)
-            pred_label = torch.argmax(output, dim=1)
-
-
-
+            pred_label = torch.argmax(output, dim=1).item() + 1
+            result = result.append({"id": img_name.split('.')[0], "category": pred_label})
+    result.to_csv("result.csv", header=False, index=False)

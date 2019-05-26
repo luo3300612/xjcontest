@@ -98,6 +98,7 @@ class Data(Dataset):
         else:
             sample['img'] = img
             sample['feature'] = feature / 1.0
+            sample['img_name'] = img_name
         return sample
 
 
