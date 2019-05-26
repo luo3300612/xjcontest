@@ -13,8 +13,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='inference')
     parser.add_argument('model-path', type=str,
                         help='model path')
-    parser.add_argument('img_path', type=str)
-    parser.add_argument('visit_feat_path', type=str)
+    parser.add_argument('img_path',
+                        default='/userhome/bigdata/test/test_img', type=str)
+    parser.add_argument('visit_feat_path',
+                        default='/userhome/bigdata/test/test_visit_feat',
+                        type=str)
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     args = parser.parse_args()
