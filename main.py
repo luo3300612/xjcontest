@@ -19,6 +19,7 @@ from torchvision.models import resnet18
 from pathlib import Path
 import pandas as pd
 from model import ResNet20
+import multiprocessing
 
 
 class DataSpliter:
@@ -180,12 +181,12 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_data,
                               batch_size=batch_size,
                               shuffle=True,
-                              num_workers=4,
+                              num_workers=multiprocessing.cpu_count(),
                               pin_memory=True)
     test_loader = DataLoader(test_data,
                              batch_size=batch_size,
                              shuffle=True,
-                             num_workers=4,
+                             num_workers=multiprocessing.cpu_count(),
                              pin_memory=True)
 
     net = Net().to(device)
