@@ -11,13 +11,16 @@ import pandas as pd
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='inference')
-    parser.add_argument('model-path', type=str,
+    parser.add_argument('--model-path',
+                        type=str,
+                        default='/userhome/xjcontest/result/lr0.01m0.9train2hvflipWD0.001firstcommit/model6500',
                         help='model path')
-    parser.add_argument('img_path',
-                        default='/userhome/bigdata/test/test_img', type=str)
-    parser.add_argument('visit_feat_path',
-                        default='/userhome/bigdata/test/test_visit_feat',
-                        type=str)
+    parser.add_argument('--img_path',
+                        type=str,
+                        default='/userhome/bigdata/test/test_img')
+    parser.add_argument('--visit_feat_path',
+                        type=str,
+                        default='/userhome/bigdata/test/test_visit_feat')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     args = parser.parse_args()
@@ -28,7 +31,7 @@ if __name__ == '__main__':
     net = Net().to(device)
     net.load_state_dict(torch.load(args.model_path))
     net.eval()
-    img_files = list(Path(args.img_path).iterdir())
+    img_files = sorted(list(Path(args.img_path).iterdir()))
     inference_data = Data(img_files=img_files,
                           visit_path=args.visit_feat_path,
                           train=False,
@@ -36,13 +39,21 @@ if __name__ == '__main__':
                               transforms.ToTensor(),
                               transforms.Normalize((0.5,), (0.5,))
                           ]))
+    inference_loader = DataLoader(inference_data,
+                                  batch_size=128,
+                                  num_workers=multiprocessing.cpu_count(),
+                                  pin_memory=True)
     result = pd.DataFrame(columns=["id", "category"])
     with torch.no_grad():
-        for sample in tqdm(inference_data):
+        for idx,sample in enumerate(tqdm(inference_loader)):
             img = sample['img'].to(device)
             feature = sample['feature'].float().to(device)
-            img_name = sample['img_name']
             output = net(img, feature)
-            pred_label = torch.argmax(output, dim=1).item() + 1
-            result = result.append({"id": img_name.split('.')[0], "category": pred_label})
-    result.to_csv("result.csv", header=False, index=False)
+            pred_label = torch.argmax(output, dim=1) + 1
+
+            for i in range(idx*128,(idx+1)*128):
+                if i >= 10000:
+                    break
+                img_name = img_files[i].name
+                result = result.append({"id": img_name.split('.')[0], "category": '00'+str(pred_label[i%128].item())},ignore_index=True)
+    result.to_csv("result.csv", header=False, index=False,sep='\t')

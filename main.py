@@ -78,7 +78,7 @@ class Data(Dataset):
 
     def __getitem__(self, idx):
         img_file = self.img_files[idx]
-        img_name = img_file.split('/')[-1]
+        img_name = str(img_file).split('/')[-1]
         if self.val:
             img = self.imgs[idx]
             feature = self.visits[idx]
@@ -98,7 +98,6 @@ class Data(Dataset):
         else:
             sample['img'] = img
             sample['feature'] = feature / 1.0
-            sample['img_name'] = img_name
         return sample
 
 
