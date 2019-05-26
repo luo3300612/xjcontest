@@ -5,7 +5,7 @@
 using namespace std;
 using namespace cv;
 
-const int patchSize = 1;
+const int patchSize = 5;
 const double w = 0.95;
 
 namespace fs = std::filesystem;
@@ -182,7 +182,7 @@ void dehaze(Mat &img, Mat_<Vec3f> &J) {
   // imshow("Window3", before);
   // imshow("Window3", J);
   float alpha = 1;
-  float beta = 0.2;
+  float beta = 0;
 
   // Mat_<Vec3b> Ju8;
   // normalize(J, J, 1, 0, NORM_MINMAX);
@@ -244,17 +244,17 @@ int main(int argc, char const *argv[]) {
     Mat img = imread(entry.path());
     // Mat img = imread("./haze.png");
 
-    // //imshow("Window41", img);
+    imshow("Window41", img);
     Mat_<Vec3f> J(img.rows, img.cols);
     // //GaussianBlur(img, img, {3, 3}, 3);
     dehaze(img, J);
-    //imshow("Window42", J);
+    imshow("Window42", J);
     Mat out;
     equalizeHist3(J, out);
-    //imshow("Window43", out);
-    //waitKey(0);
+    imshow("Window43", out);
+    waitKey(0);
     string save_file = save_path + '/' + (string)entry.path().filename();
-    imwrite(save_file,out);
+    // imwrite(save_file,out);
     
     cout << count << "/" << 40000 << endl;
     // imwrite();
