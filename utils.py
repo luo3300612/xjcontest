@@ -16,7 +16,7 @@ class OutPutUtil:
         self.terminal = terminal
         if log:
             logging.basicConfig(level=logging.DEBUG,
-                                filename=log_file,
+                                filename=os.path.join(log_file,'train.log'),
                                 filemode='a',
                                 format='%(asctime)s - %(levelname)s: %(message)s')
 
@@ -95,8 +95,8 @@ def gen_csv(img_path, visit_path, ratio=[0.8, 0.1, 0.1]):
             filename = file.name
             im_path = str(file)
             vis_path = visit_path + '/' + filename.split('.')[0] + '.npy'
-            apd = [im_path, vis_path, i]
-            train = train.append(apd)
+            # apd = [im_path, vis_path, i]
+            train = train.append({'img_path': im_path, 'visit_path': vis_path, 'class': i}, ignore_index=True)
             # print("append:", apd)
         print("val")
         for j in tqdm(range(int(ratio[0] * num), int((ratio[0] + ratio[1]) * num))):
@@ -104,8 +104,8 @@ def gen_csv(img_path, visit_path, ratio=[0.8, 0.1, 0.1]):
             filename = file.name
             im_path = str(file)
             vis_path = visit_path + '/' + filename.split('.')[0] + '.npy'
-            apd = [im_path, vis_path, i]
-            val = val.append(apd)
+            # apd = [im_path, vis_path, i]
+            val = val.append({'img_path': im_path, 'visit_path': vis_path, 'class': i}, ignore_index=True)
             # print("append:", apd)
         print("test:")
         for j in tqdm(range(int((ratio[0] + ratio[1]) * num), num)):
@@ -113,8 +113,8 @@ def gen_csv(img_path, visit_path, ratio=[0.8, 0.1, 0.1]):
             filename = file.name
             im_path = str(file)
             vis_path = visit_path + '/' + filename.split('.')[0] + '.npy'
-            apd = [im_path, vis_path, i]
-            test = test.append(apd)
+            # apd = [im_path, vis_path, i]
+            test = test.append({'img_path': im_path, 'visit_path': vis_path, 'class': i}, ignore_index=True)
             # print("append:", apd)
     # assert len(train) + len(val) + len(test) == 120000, "{}+{}+{} should be 40000".format(len(train), len(val),
     #                                                                                      len(test))

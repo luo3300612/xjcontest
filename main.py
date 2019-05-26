@@ -20,6 +20,9 @@ from pathlib import Path
 import pandas as pd
 from model import ResNet20
 import multiprocessing
+from datetime import datetime
+import time
+from tqdm import tqdm
 
 
 class DataSpliter:
@@ -45,33 +48,50 @@ class DataSpliter:
 
 class Data(Dataset):
 
-    def __init__(self, img_path, visit_path, train=True, transforms=None):
-        self.img_path = Path(img_path)
+    def __init__(self, img_files, visit_path, monitor,train=True, val=False, transforms=None):
+        self.img_files = img_files
         self.visit_path = visit_path
-        self.img_files = list(self.img_path.iterdir())
         self.train = train
         self.transforms = transforms
+        self.val = val
+        if self.val: # about 10~20s accerleration for val(4000) each epoch, consumes 2 min
+            monitor.speak("load all to memory")
+            self.imgs = []
+            self.visits = []
+            for img_file in tqdm(self.img_files):
+                img = np.array(Image.open(img_file))
+                img_name = img_file.split('/')[-1]
+                feature = np.load(self.visit_path + '/' + img_name.split('.')[0] + '.npy')
+                self.imgs.append(img)
+                self.visits.append(feature)
+        else:
+            monitor.speak("lazy load")
 
     def __len__(self):
-        return len(self.csv)
+        return len(self.img_files)
 
     def __getitem__(self, idx):
         img_file = self.img_files[idx]
-        img = Image.open(img_file)
-        feature = np.load(self.visit_path + img_file.name.split('.')[0] + '.npy')
+        img_name = img_file.split('/')[-1]
+        if self.val:
+            img = self.imgs[idx]
+            feature = self.visits[idx]
+        else:
+            img = np.array(Image.open(img_file))
+            feature = np.load(self.visit_path + '/' + img_name.split('.')[0] + '.npy')
 
         if self.transforms is not None:
             img = self.transforms(img)
 
         sample = {}
         if self.train:
-            target = self.csv.iloc[idx][2] - 1
+            target = int(img_name.split('.')[0].split('_')[-1]) - 1
             sample['img'] = img
-            sample['feature'] = feature
+            sample['feature'] = feature / 1.0
             sample['target'] = target
         else:
             sample['img'] = img
-            sample['feature'] = feature
+            sample['feature'] = feature / 1.0
         return sample
 
 
@@ -96,8 +116,9 @@ class Net(nn.Module):
         self.fc = nn.Linear(512 + 64, num_classes)
 
     def forward(self, img, text):
-        img_feature = self.feature_extracter(img)
+        img_feature = self.img_feature_extracter(img).view((img.size(0), -1))
         visit_feature = self.visit_feature_extracter(text)
+
         out = torch.cat((img_feature, visit_feature), dim=1)
         out = self.fc(out)
         return out
@@ -113,8 +134,6 @@ if __name__ == '__main__':
                         help='val interveal (default: 1000)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
-    parser.add_argument('--log-path', type=str, default='./train.log',
-                        help='path to save log file (default: ./train.log)')
     parser.add_argument('--adam', action='store_true', default=False,
                         help='use adam')
     parser.add_argument('--lr', type=float, default=0.1,
@@ -127,14 +146,14 @@ if __name__ == '__main__':
                         help='save path (default: ./result)')
     parser.add_argument('--val', action='store_true', default=False,
                         help='validation mode')
-    parser.add_argument('--comment', type=str, default='',
+    parser.add_argument('--comment', type=str, default=str(datetime.today()),
                         help='comment')
     args = parser.parse_args()
     save_path = args.save_path
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
-    monitor = OutPutUtil(True, True, args.log_path)
+    monitor = OutPutUtil(True, True, args.save_path)
     monitor.speak(args)
     batch_size = args.batch_size
 
@@ -157,26 +176,31 @@ if __name__ == '__main__':
     if not args.val:
         monitor.speak("train mode")
         train_data = Data(train_path,
+                          visit_dir,
                           train=True,
+                          val=False,
                           transforms=transforms.Compose([
                               transforms.ToTensor(),
                               transforms.Normalize((0.5,), (0.5,))
-                          ]))
+                          ]), monitor=monitor)
     else:
         monitor.speak("val mode")
         train_data = Data(val_path,
+                          visit_dir,
                           train=True,
+                          val=False,
                           transforms=transforms.Compose([
                               transforms.ToTensor(),
                               transforms.Normalize((0.5,), (0.5,))
-                          ]))
+                          ]), monitor=monitor)
 
     test_data = Data(test_path,
+                     visit_dir,
                      train=True,
                      transforms=transforms.Compose([
                          transforms.ToTensor(),
                          transforms.Normalize((0.5,), (0.5,))
-                     ]))
+                     ]), monitor=monitor)
 
     train_loader = DataLoader(train_data,
                               batch_size=batch_size,
@@ -213,17 +237,19 @@ if __name__ == '__main__':
     net.train()
     acc = 0
     acc_denominator = 0
+    torch.cuda.synchronize()
+    start = time.time()
     while True:
         for batch_idx, sample in enumerate(train_loader):
             img = sample['img'].to(device)
-            feature = sample['feature'].to(device)
+            feature = sample['feature'].float().to(device)
             target = sample['target'].to(device)
             iter_idx += 1
             lr = adjust_learning_rate(optimizer, iter_idx, n_iter, init_lr=learning_rate)
             output = net(img, feature)
             loss = criterion(output, target)
             pred_label = torch.argmax(output, dim=1)
-            acc += torch.sum(pred_label == target)
+            acc += torch.sum(pred_label == target).item()
             acc_denominator += img.size(0)
             optimizer.zero_grad()
             loss.backward()
@@ -232,11 +258,18 @@ if __name__ == '__main__':
             #     monitor.speak('Iter: {}/{}\tLoss:{}\tLR: {}'.format(iter_idx, n_iter, "??", lr))
             if iter_idx % print_interval == 0:
                 acc = acc / acc_denominator * 100
-                monitor.speak(
-                    'Iter: {}/{}\tLoss:{:.6f}\tACC: {:.2f}\tLR: {}'.format(iter_idx, n_iter, loss.item(), acc, lr))
+                torch.cuda.synchronize()
+                end = time.time()
+                message = 'Iter: {}/{}\tLoss:{:.6f}\tACC: {:.2f}\ttime/print:{:.4f}\tLR: {}'
+                monitor.speak(message.format(iter_idx, n_iter,
+                                             loss.item(), acc,
+                                             end - start,
+                                             lr))
                 writer.add_scalar("train/train_acc", acc, iter_idx)
                 acc = 0
                 acc_denominator = 0
+                torch.cuda.synchronize()
+                start = time.time()
             writer.add_scalar("train/train_loss", loss.item(), iter_idx)
 
             if iter_idx % val_interval == 0:
@@ -246,7 +279,7 @@ if __name__ == '__main__':
                     acc = 0.0
                     for batch_idx, sample in enumerate(test_loader):
                         img = sample['img'].to(device)
-                        feature = sample['feature'].to(device)
+                        feature = sample['feature'].float().to(device)
                         target = sample['target'].to(device)
                         output = net(img, feature)
                         pred_label = torch.argmax(output, dim=1)
