@@ -48,13 +48,13 @@ class DataSpliter:
 
 class Data(Dataset):
 
-    def __init__(self, img_files, visit_path, monitor,train=True, val=False, transforms=None):
+    def __init__(self, img_files, visit_path, monitor, train=True, val=False, transforms=None):
         self.img_files = img_files
         self.visit_path = visit_path
         self.train = train
         self.transforms = transforms
         self.val = val
-        if self.val: # about 10~20s accerleration for val(4000) each epoch, consumes 2 min
+        if self.val:  # about 10~20s accerleration for val(4000) each epoch, consumes 2 min
             monitor.speak("load all to memory")
             self.imgs = []
             self.visits = []
@@ -77,7 +77,7 @@ class Data(Dataset):
             img = self.imgs[idx]
             feature = self.visits[idx]
         else:
-            img = np.array(Image.open(img_file))
+            img = Image.open(img_file)
             feature = np.load(self.visit_path + '/' + img_name.split('.')[0] + '.npy')
 
         if self.transforms is not None:
@@ -130,8 +130,8 @@ if __name__ == '__main__':
                         help='input batch size for training and testing (default: 64)')
     parser.add_argument('--n-iter', type=int, default=64000,
                         help='n-iter (default: 64000)')
-    parser.add_argument('--val-interval', type=int, default=1000,
-                        help='val interveal (default: 1000)')
+    parser.add_argument('--val-interval', type=int, default=500,
+                        help='val interveal (default: 500)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--adam', action='store_true', default=False,
@@ -152,8 +152,11 @@ if __name__ == '__main__':
     save_path = args.save_path
     if not os.path.exists(save_path):
         os.mkdir(save_path)
+    event_path = os.path.join(save_path,args.comment)
+    if not os.path.exists(event_path):
+        os.mkdir(event_path)
 
-    monitor = OutPutUtil(True, True, args.save_path)
+    monitor = OutPutUtil(True, True, event_path)
     monitor.speak(args)
     batch_size = args.batch_size
 
@@ -180,6 +183,8 @@ if __name__ == '__main__':
                           train=True,
                           val=False,
                           transforms=transforms.Compose([
+                              transforms.RandomHorizontalFlip(),
+                              transforms.RandomVerticalFlip(),
                               transforms.ToTensor(),
                               transforms.Normalize((0.5,), (0.5,))
                           ]), monitor=monitor)
@@ -190,6 +195,8 @@ if __name__ == '__main__':
                           train=True,
                           val=False,
                           transforms=transforms.Compose([
+                              transforms.RandomHorizontalFlip(),
+                              transforms.RandomVerticalFlip(),
                               transforms.ToTensor(),
                               transforms.Normalize((0.5,), (0.5,))
                           ]), monitor=monitor)
@@ -224,7 +231,7 @@ if __name__ == '__main__':
         optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=args.momentum,
                               weight_decay=args.weight_decay)
 
-    writer = SummaryWriter(log_dir=save_path, comment=args.comment)
+    writer = SummaryWriter(log_dir=event_path, comment=args.comment)
 
     iter_idx = 0
     n_iter = args.n_iter
@@ -275,27 +282,31 @@ if __name__ == '__main__':
             if iter_idx % val_interval == 0:
                 test_loss = 0.0
                 net.eval()
-                with torch.no_grad():
-                    acc = 0.0
-                    for batch_idx, sample in enumerate(test_loader):
-                        img = sample['img'].to(device)
-                        feature = sample['feature'].float().to(device)
-                        target = sample['target'].to(device)
-                        output = net(img, feature)
-                        pred_label = torch.argmax(output, dim=1)
-                        acc += torch.sum(pred_label == target).item()
-                        loss = criterion(output, target)
-                        test_loss += loss.item() * img.shape[0]
-                    acc = acc / len(test_data)
-                    test_loss = test_loss / len(test_data)
+                try:
+                    with torch.no_grad():
+                        acc = 0.0
+                        for batch_idx, sample in tqdm(enumerate(test_loader)):
+                            img = sample['img'].to(device)
+                            feature = sample['feature'].float().to(device)
+                            target = sample['target'].to(device)
+                            output = net(img, feature)
+                            pred_label = torch.argmax(output, dim=1)
+                            acc += torch.sum(pred_label == target).item()
+                            loss = criterion(output, target)
+                            test_loss += loss.item() * img.shape[0]
+                        acc = acc / len(test_data)
+                        test_loss = test_loss / len(test_data)
 
-                    monitor.speak('Test Loss: {:.6f},acc:{:.4f}'.format(test_loss, acc))
-                    writer.add_scalar("train/test_loss", test_loss, iter_idx)
-                    writer.add_scalar("train/acc", acc, iter_idx)
-                if test_loss < best_test_loss:
-                    torch.save(net.state_dict(), save_path / "model{}".format(iter_idx))
-                    monitor.speak("test loss: {:.6f} < best: {:.6f},save model".format(test_loss, best_test_loss))
-                    best_test_loss = test_loss
+                        monitor.speak('Test Loss: {:.6f},acc:{:.4f}'.format(test_loss, acc))
+                        writer.add_scalar("train/test_loss", test_loss, iter_idx)
+                        writer.add_scalar("train/acc", acc, iter_idx)
+                    if test_loss < best_test_loss and not args.val:
+                        torch.save(net.state_dict(), event_path + '/' + "model{}".format(iter_idx))
+                        monitor.speak("test loss: {:.6f} < best: {:.6f},save model".format(test_loss, best_test_loss))
+                        best_test_loss = test_loss
+                except KeyboardInterrupt:
+                    monitor.speak("stop eval")
+                    pass
                 net.train()
 
         if iter_idx > n_iter:
