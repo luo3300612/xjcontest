@@ -48,14 +48,17 @@ class DataSpliter:
 
 class Data(Dataset):
 
-    def __init__(self, img_files, visit_path, monitor, train=True, val=False, transforms=None):
+    def __init__(self, img_files, visit_path, monitor=None, train=True, val=False, transforms=None):
         self.img_files = img_files
         self.visit_path = visit_path
         self.train = train
         self.transforms = transforms
         self.val = val
         if self.val:  # about 10~20s accerleration for val(4000) each epoch, consumes 2 min
-            monitor.speak("load all to memory")
+            if not monitor:
+                ...
+            else:
+                monitor.speak("load all to memory")
             self.imgs = []
             self.visits = []
             for img_file in tqdm(self.img_files):
@@ -65,7 +68,10 @@ class Data(Dataset):
                 self.imgs.append(img)
                 self.visits.append(feature)
         else:
-            monitor.speak("lazy load")
+            if not monitor:
+                ...
+            else:
+                monitor.speak("lazy load")
 
     def __len__(self):
         return len(self.img_files)
