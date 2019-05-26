@@ -102,6 +102,22 @@ class ResNetImg(nn.Module):
 
         return nn.Sequential(*layers)
 
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        # x = self.maxpool(x)
+        x = self.block1(x)
+        x = self.block2(x)
+        x = self.block3(x)
+        x = self.avgpool(x)
+        x = x.view((x.shape[0], -1))
+
+        if self.feature_dim != 128:
+            x = self.fc(x)
+            x = self.relu(x)
+        return x
+
 
 class ResNetBlock_new(nn.Module):
     def __init__(self, in_channel, out_channel, downsample=None):
