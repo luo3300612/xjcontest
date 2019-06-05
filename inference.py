@@ -44,11 +44,14 @@ if __name__ == '__main__':
                                   num_workers=multiprocessing.cpu_count(),
                                   pin_memory=True)
     result = pd.DataFrame(columns=["id", "category"])
+    # distribution = torch.Tensor([0.2386, 0.1884, 0.0897, 0.0340, 0.0866, 0.1377, 0.0879, 0.0654, 0.0717]).to(device)
     with torch.no_grad():
         for idx,sample in enumerate(tqdm(inference_loader)):
             img = sample['img'].to(device)
             feature = sample['feature'].float().to(device)
             output = net(img, feature)
+            # output = torch.nn.functional.softmax(output,dim=1)
+            # output = output / distribution
             pred_label = torch.argmax(output, dim=1) + 1
 
             for i in range(idx*128,(idx+1)*128):
