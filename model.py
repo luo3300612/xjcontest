@@ -11,16 +11,17 @@ class ResNet20(nn.Module):
     def __init__(self, in_channel, feature_dim=64):
         super(ResNet20, self).__init__()
         self.feature_dim = feature_dim
-        self.conv1 = nn.Conv2d(in_channel, 16, kernel_size=3, stride=1, padding=(2, 3), bias=False)
+        self.conv1 = nn.Conv2d(in_channel, 16, kernel_size=3, stride=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
         self.relu = nn.ReLU(inplace=True)
         # self.maxpool = nn.MaxPool2d(2, 2)
-        self.block1 = self._make_layer(16, 16, 3)
-        self.block2 = self._make_layer(16, 32, 3, downsample=True)
-        self.block3 = self._make_layer(32, 64, 3, downsample=True)
+        # self.block1 = self._make_layer(16, 16, 3)
+        # self.block2 = self._make_layer(16, 32, 3, downsample=True)
+        # self.block3 = self._make_layer(32, 64, 3, downsample=True)
+        self.block1 = self._make_layer(16, 32, 3, downsample=True)
+        self.block2 = self._make_layer(32, 64, 3, downsample=True)
+        self.block3 = self._make_layer(64, 128, 3, downsample=True)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        if feature_dim != 64:
-            self.fc = nn.Linear(64, feature_dim)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -47,16 +48,66 @@ class ResNet20(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        # x = self.maxpool(x)
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)
         x = self.avgpool(x)
         x = x.view((x.shape[0], -1))
+        return x
 
-        if self.feature_dim != 64:
-            x = self.fc(x)
-            x = self.relu(x)
+
+class ResNet20_64(nn.Module):
+    """
+    后面有bn bias可以是Fasle
+    nn.AdaptiveAvgPool2d好用
+    nn.Sequential好用
+    """
+
+    def __init__(self, in_channel, feature_dim=64):
+        super(ResNet20_64, self).__init__()
+        self.feature_dim = feature_dim
+        self.conv1 = nn.Conv2d(in_channel, 16, kernel_size=3, stride=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(16)
+        self.relu = nn.ReLU(inplace=True)
+        # self.maxpool = nn.MaxPool2d(2, 2)
+        self.block1 = self._make_layer(16, 16, 3)
+        self.block2 = self._make_layer(16, 32, 3, downsample=True)
+        self.block3 = self._make_layer(32, 64, 3, downsample=True)
+        # self.block1 = self._make_layer(16, 32, 3, downsample=True)
+        # self.block2 = self._make_layer(32, 64, 3, downsample=True)
+        # self.block3 = self._make_layer(64, 128, 3, downsample=True)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+    def _make_layer(self, in_channel, out_channel, num_block, downsample=False):
+        layers = []
+        if downsample:
+            downsample = nn.Sequential(nn.Conv2d(in_channel, out_channel, kernel_size=1, stride=2, bias=False),
+                                       nn.BatchNorm2d(out_channel))
+        else:
+            downsample = None
+
+        layers.append(ResNetBlock_new(in_channel, out_channel, downsample))
+        for i in range(1, num_block):
+            layers.append(ResNetBlock_new(out_channel, out_channel))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.block1(x)
+        x = self.block2(x)
+        x = self.block3(x)
+        x = self.avgpool(x)
+        x = x.view((x.shape[0], -1))
         return x
 
 
@@ -67,9 +118,8 @@ class ResNetImg(nn.Module):
     nn.Sequential好用
     """
 
-    def __init__(self, in_channel, feature_dim=128):
+    def __init__(self, in_channel, num_classes=10):
         super(ResNetImg, self).__init__()
-        self.feature_dim = feature_dim
         self.conv1 = nn.Conv2d(in_channel, 32, kernel_size=3, stride=1, padding=(2, 3), bias=False)
         self.bn1 = nn.BatchNorm2d(32)
         self.relu = nn.ReLU(inplace=True)
@@ -78,8 +128,7 @@ class ResNetImg(nn.Module):
         self.block2 = self._make_layer(32, 64, 3, downsample=True)
         self.block3 = self._make_layer(64, 128, 3, downsample=True)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        if feature_dim != 128:
-            self.fc = nn.Linear(128, feature_dim)
+        self.fc = nn.Linear(64, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -101,22 +150,6 @@ class ResNetImg(nn.Module):
             layers.append(ResNetBlock_new(out_channel, out_channel))
 
         return nn.Sequential(*layers)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        # x = self.maxpool(x)
-        x = self.block1(x)
-        x = self.block2(x)
-        x = self.block3(x)
-        x = self.avgpool(x)
-        x = x.view((x.shape[0], -1))
-
-        if self.feature_dim != 128:
-            x = self.fc(x)
-            x = self.relu(x)
-        return x
 
 
 class ResNetBlock_new(nn.Module):
